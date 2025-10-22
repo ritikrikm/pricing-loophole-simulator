@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithmic Pricing Loophole Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F5F5F4; /* stone-100 */
+            color: #27272A; /* zinc-800 */
+        }
+        .accent-color { color: #0D9488; /* teal-600 */ }
+        .bg-accent-color { background-color: #0D9488; /* teal-600 */ }
+        .border-accent-color { border-color: #0D9488; /* teal-600 */ }
+        .btn-active {
+            background-color: #0D9488 !important;
+            color: white !important;
+            border-color: #0D9488 !important;
+        }
+        .toggle-bg:checked { background-color: #0D9488; }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+
+        /* Custom CSS for Toggle Switch Movement */
+        .toggle-bg {
+            left: 0.125rem;
+            transition: left 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+        .toggle-bg:checked {
+            background-color: #0D9488;
+            left: 1.5rem;
+        }
+
+        /* --- Marquee Banner CSS (NEW) --- */
+        .marquee-container {
+            overflow: hidden;
+            white-space: nowrap;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .marquee-content {
+            display: inline-block;
+            padding-left: 100%; /* Start off-screen */
+            animation: marquee 25s linear infinite; /* Control speed here */
+            font-weight: 600;
+        }
+        @keyframes marquee {
+            0%   { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <header class="text-center mb-12">
+            <h1 class="text-3xl md:text-5xl font-bold text-zinc-900 mb-2">The Ride-Share Pricing Paradox</h1>
+            <p class="text-lg md:text-xl text-zinc-600">A Simple Simulator for Algorithmic Flaws</p>
+        </header>
+
+        <h3 class="text-xl md:text-2xl font-semibold text-center mb-6 text-zinc-800 border-b pb-3 mt-8">Key Pricing Definitions</h3>
+            <div class="grid md:grid-cols-3 gap-6 mb-12">
+                
+                <!-- Card 1: High Multiplier -->
+                <div class="card p-6 border-t-4 border-red-500">
+                    <p class="text-3xl mb-3">📈</p>
+                    <h4 class="text-lg font-bold mb-2 text-zinc-900">High Multiplier (Premium Surge)</h4>
+                    <p class="text-sm text-zinc-600">
+                        What: The maximum surge rate applied to highly convenient, premium routes (like toll roads).
+                        <br><br>
+                        Why: Incentivizes drivers and charges customers a premium for speed and convenience during peak times.
+                    </p>
+                </div>
+                
+                <!-- Card 2: Low Multiplier -->
+                <div class="card p-6 border-t-4 border-yellow-500">
+                    <p class="text-3xl mb-3">📉</p>
+                    <h4 class="text-lg font-bold mb-2 text-zinc-900">Low Multiplier (Sub-optimal Baseline)</h4>
+                    <p class="text-sm text-zinc-600">
+                        What: The standard surge rate applied to slower, non-premium routes (e.g., free highways).
+                        <br><br>
+                        Why: It is calculated based on traffic but is often too low for true peak demand, which creates the loophole and causes the price to collapse.
+                    </p>
+                </div>
+
+                <!-- Card 3: Surge Floor (ICON CHANGED TO LOCK) -->
+                <div class="card p-6 border-t-4 border-teal-600">
+                    <p class="text-3xl mb-3">🔒</p> 
+                    <h4 class="text-lg font-bold mb-2 text-zinc-900">Surge Floor (The Mitigation)</h4>
+                    <p class="text-sm text-zinc-600">
+                        What: A **mandatory minimum** multiplier that the algorithm cannot drop below.
+                        <br><br>
+                        Why: A preventative measure to stop the pricing loophole by ensuring all peak-hour trips meet a baseline revenue requirement, regardless of the route's calculated efficiency score.
+                    </p>
+                </div>
+            </div>
+
+        <section id="simulator" class="card p-6 md:p-8 mb-12">
+            
+            <h2 class="text-2xl md:text-3xl font-bold text-center mb-8">Fare Scenario Simulator</h2>
+            <div class="grid md:grid-cols-3 gap-8 items-start">
+                
+                <!-- COLUMN 1: CONTROLS -->
+                <div class="md:col-span-1 flex flex-col space-y-6">
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">1. Choose Trip Scenario</h3>
+                        <div class="flex space-x-2">
+                            <button id="btnDirect" class="w-full py-2 px-4 border-2 rounded-lg transition-all btn-active">Direct Trip</button>
+                            <button id="btnMidpoint" class="w-full py-2 px-4 border-2 rounded-lg transition-all border-zinc-300 text-zinc-600 hover:bg-teal-50">Midpoint Trip (Loophole)</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2">2. The Developer's Fix</h3>
+                        <div id="toggleControlContainer" class="flex items-center justify-between bg-stone-100 p-3 rounded-lg transition-opacity">
+                            <label for="mitigationToggle" class="text-zinc-700 font-medium">Apply Surge Floor</label>
+                            <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                <input type="checkbox" name="toggle" id="mitigationToggle" class="toggle-bg absolute block w-7 h-7 -mt-1 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                <label for="mitigationToggle" class="block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- INPUT CONFIGURATION (Dynamic Sliders Re-added) -->
+                    <div class="space-y-4 p-4 border rounded-lg bg-stone-50">
+                        <h4 class="font-bold text-zinc-800">3. Set Pricing Variables</h4>
+
+                        <label class="block text-sm font-medium text-zinc-700">Base Rate (Time + Distance)</label>
+                        <input type="range" id="inputBaseRate" min="40" max="65" value="53.60" step="0.10" class="w-full">
+                        <p class="text-xs text-right text-zinc-500" id="displayBaseRate">$53.60</p>
+
+                        <label class="block text-sm font-medium text-zinc-700">Toll Cost (Direct Trip only)</label>
+                        <input type="range" id="inputTollCost" min="0" max="15" value="8.13" step="0.01" class="w-full">
+                        <p class="text-xs text-right text-zinc-500" id="displayTollCost">$8.13</p>
+
+                        <label class="block text-sm font-medium text-zinc-700">High Multiplier (Direct Trip)</label>
+                        <input type="range" id="inputHighMultiplier" min="1.3" max="2.2" value="1.70" step="0.05" class="w-full">
+                        <p class="text-xs text-right text-zinc-500" id="displayHighMultiplier">1.70x</p>
+
+                        <label class="block text-sm font-medium text-zinc-700">Low Multiplier (Loophole Value)</label>
+                        <input type="range" id="inputLowMultiplier" min="0.5" max="1.0" value="0.75" step="0.05" class="w-full">
+                        <p class="text-xs text-right text-zinc-500" id="displayLowMultiplier">0.75x</p>
+                        
+                        <label class="block text-sm font-medium text-teal-700">Surge Floor (The Fix)</label>
+                        <input type="range" id="inputSurgeFloor" min="1.0" max="1.5" value="1.20" step="0.05" class="w-full">
+                        <p class="text-xs text-right text-teal-600" id="displaySurgeFloor">1.20x</p>
+
+                    </div>
+
+
+                    <div id="summaryCard" class="bg-teal-50 p-4 rounded-lg border border-teal-200 transition-all">
+                        <h4 class="font-bold text-lg text-zinc-800 mb-2" id="summaryTitle">Current Trip Summary</h4>
+                        <div class="flex justify-between items-baseline mb-2">
+                            <span class="text-zinc-600">Pre-Promo Fare:</span>
+                            <span class="text-xl font-bold text-zinc-800" id="prePromoPrice">$XX.XX</span>
+                        </div>
+                        <div class="flex justify-between items-baseline mb-2">
+                            <span class="text-zinc-600">Final Promo Fare: (40% off)</span>
+                            <span class="text-3xl font-bold accent-color" id="finalPrice">$XX.XX</span>
+                        </div>
+                        <p class="text-sm text-zinc-500" id="summaryDescription">Adjust the variables above and click a scenario button to see the final price.</p>
+                    </div>
+                </div>
+
+                <!-- COLUMN 2 & 3: CHART -->
+                <div class="md:col-span-2">
+                    <h3 class="text-lg font-semibold mb-2 text-center">Fare Component Breakdown (Pre-Promo)</h3>
+                    <div class="chart-container relative w-full h-80 md:h-96 max-w-2xl mx-auto">
+                        <canvas id="fareChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STATIC EXPLANATION SECTION -->
+        <section id="explanation" class="mb-12">
+            <h2 class="text-2xl md:text-3xl font-bold text-center mb-8">What Broke? The Algorithmic Conflict</h2>
+             <p class="text-zinc-600 max-w-3xl mx-auto text-center mb-10">The core issue isn't a bug, but a weighting error in the algorithm's cost function. The system saw two scenarios and optimized them based on flawed assumptions about the value of time versus the cost of tolls and surge.</p>
+            
+            <!-- Original 2-Card Explanation (Keep this) -->
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="card p-6">
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-4"></span>
+                        <div>
+                           <h3 class="text-xl font-semibold">Over-Valued Speed (Direct Trip)</h3>
+                        </div>
+                    </div>
+                    <p class="text-zinc-600">The algorithm aggressively penalized free highways (like the 401) for potential peak-hour slowdowns. This made the 407 ETR's time savings appear worth the high toll and a premium surge, leading to an inflated price.</p>
+                </div>
+                 <div class="card p-6">
+                    <div class="flex items-center mb-4">
+                        <span class="text-3xl mr-4"></span>
+                        <div>
+                           <h3 class="text-xl font-semibold">Under-Surged Non-Premium Route (Trip B)</h3>
+                        </div>
+                    </div>
+                    <p class="text-zinc-600">Forcing a stop made the 407 ETR route inefficient. The system defaulted to a non-toll route but priced it with a standard, low-level surge that was inappropriate for peak demand, causing the price to collapse.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="text-center border-t border-stone-200">
+             <!-- MARQUEE BANNER -->
+            <div class="marquee-container bg-teal-600 text-white py-2 shadow-lg">
+                <div class="marquee-content text-sm md:text-lg tracking-wider">
+                    ✨ Provided by Ritik Mehta | Algorithmic Loophole Simulator | Understanding Surge Floors and Optimization Errors | Learn how to protect your pricing model ✨
+                </div>
+            </div>
+            <div class="pt-8">
+                 <h2 class="text-2xl font-bold mb-2">Key Takeaways for Developers</h2>
+                 <p class="text-zinc-600 max-w-3xl mx-auto">When designing optimization algorithms, ensure that the penalty for using non-premium options is sufficiently weighted to avoid a pricing collapse when users manipulate input constraints. A simple Surge Floor can maintain consistency and prevent revenue loss without removing user choice.</p>
+            </div>
+        </footer>
+
+    </div>
+
+<script>
+    // --- UI Element Selectors ---
+    const btnDirect = document.getElementById('btnDirect');
+    const btnMidpoint = document.getElementById('btnMidpoint');
+    const mitigationToggle = document.getElementById('mitigationToggle');
+    const toggleContainer = document.getElementById('toggleControlContainer');
+
+    const inputBaseRate = document.getElementById('inputBaseRate');
+    const inputTollCost = document.getElementById('inputTollCost');
+    const inputHighMultiplier = document.getElementById('inputHighMultiplier');
+    const inputLowMultiplier = document.getElementById('inputLowMultiplier');
+    const inputSurgeFloor = document.getElementById('inputSurgeFloor');
+    
+    const displayBaseRate = document.getElementById('displayBaseRate');
+    const displayTollCost = document.getElementById('displayTollCost');
+    const displayHighMultiplier = document.getElementById('displayHighMultiplier');
+    const displayLowMultiplier = document.getElementById('displayLowMultiplier');
+    const displaySurgeFloor = document.getElementById('displaySurgeFloor');
+    
+    const finalPriceEl = document.getElementById('finalPrice');
+    const prePromoPriceEl = document.getElementById('prePromoPrice');
+    const summaryTitleEl = document.getElementById('summaryTitle');
+    const summaryDescriptionEl = document.getElementById('summaryDescription');
+    const ctx = document.getElementById('fareChart').getContext('2d');
+
+    let fareChart;
+    let currentScenario = 'direct'; // 'direct' or 'midpoint'
+    let mitigationEnabled = false;
+
+    // --- Core Calculation Function (Matches Python Logic in fare_calculator.py) ---
+    function calculateFare(baseRate, tollCost, lowMultiplier, highMultiplier, surgeFloor, isMidpoint, isMitigationEnabled) {
+        let effectiveMultiplier;
+        let finalToll = 0;
+        let title, description;
+        const PROMO_DISCOUNT = 0.40; // 40% off
+
+        if (isMidpoint) {
+            // Midpoint Trip: Loophole Scenario (No Toll)
+            finalToll = 0;
+            effectiveMultiplier = lowMultiplier;
+
+            if (isMitigationEnabled) {
+                // Apply Surge Floor Fix
+                effectiveMultiplier = Math.max(lowMultiplier, surgeFloor);
+                title = "Midpoint Trip (Surge Floor Applied)";
+                description = "The loophole is mitigated, enforcing a minimum peak-hour surge.";
+            } else {
+                // Loophole Active
+                title = "Midpoint Trip (Pricing Collapse)";
+                description = "Price collapses due to the inappropriately low multiplier when the toll road is avoided. Check the console for the negative surge value!";
+            }
+
+        } else {
+            // Direct Trip: Premium Scenario (Includes Toll)
+            finalToll = tollCost;
+            effectiveMultiplier = highMultiplier; // Direct trip uses the high, premium multiplier
+            title = "Direct Trip (Premium Route)";
+            description = "The fastest route priced with high toll and the maximum peak-hour surge.";
+        }
+
+        // --- Final Calculations ---
+        const totalFare = (baseRate * effectiveMultiplier) + finalToll;
+        const promoFare = totalFare * (1.0 - PROMO_DISCOUNT);
+        
+        // Components for the chart
+        const surgeComponent = totalFare - baseRate - finalToll;
+
+        const components = {
+            baseFare: baseRate,
+            toll: finalToll,
+            surge: surgeComponent
+        };
+        
+        return { totalFare, promoFare, components, title, description, baseRate, effectiveMultiplier, tollCost };
+    }
+
+    // --- UI Update and Rendering ---
+
+    function updateInputs() {
+        // Read values from inputs and update display labels
+        displayBaseRate.innerText = `$${parseFloat(inputBaseRate.value).toFixed(2)}`;
+        displayTollCost.innerText = `$${parseFloat(inputTollCost.value).toFixed(2)}`;
+        displayHighMultiplier.innerText = `${parseFloat(inputHighMultiplier.value).toFixed(2)}x`;
+        displayLowMultiplier.innerText = `${parseFloat(inputLowMultiplier.value).toFixed(2)}x`;
+        displaySurgeFloor.innerText = `${parseFloat(inputSurgeFloor.value).toFixed(2)}x`;
+
+        // Trigger the main display update
+        updateDisplay();
+    }
+    
+    function updateDisplay() {
+        // 1. Get current values from UI
+        const baseRate = parseFloat(inputBaseRate.value);
+        const tollCost = parseFloat(inputTollCost.value);
+        const lowMultiplier = parseFloat(inputLowMultiplier.value);
+        const highMultiplier = parseFloat(inputHighMultiplier.value);
+        const surgeFloor = parseFloat(inputSurgeFloor.value);
+        const isMidpoint = currentScenario === 'midpoint';
+        const isMitigationEnabled = mitigationToggle.checked;
+
+        // 2. Disable/Enable Toggle and Toll Input based on Scenario
+        if (isMidpoint) {
+            // Ensure the state variable is synced visually when switching scenarios
+            mitigationToggle.disabled = false; 
+            mitigationToggle.checked = mitigationEnabled;
+            toggleContainer.classList.remove('opacity-50', 'pointer-events-none');
+            // Disable Toll Cost input as it's not applicable to the non-premium route
+            inputTollCost.disabled = true;
+        } else {
+            // Direct Trip: Fix is irrelevant
+            mitigationToggle.checked = false;
+            mitigationToggle.disabled = true;
+            toggleContainer.classList.add('opacity-50', 'pointer-events-none');
+            inputTollCost.disabled = false;
+        }
+
+
+        // 3. Calculate Fare (using JS function that mirrors the Python logic)
+        const result = calculateFare(
+            baseRate, 
+            tollCost, 
+            lowMultiplier, 
+            highMultiplier, 
+            surgeFloor, 
+            isMidpoint, 
+            isMitigationEnabled
+        );
+
+        // 4. Update Summary Card (Price Only)
+        prePromoPriceEl.innerText = `$${result.totalFare.toFixed(2)}`;
+        finalPriceEl.innerText = `$${result.promoFare.toFixed(2)}`;
+        summaryTitleEl.innerText = result.title;
+        summaryDescriptionEl.innerText = result.description;
+        
+        // 5. Update Chart
+        const { baseFare, toll, surge } = result.components;
+        
+        // Log all required data to console
+        console.log(`--- Real-time Calculation for ${result.title} ---`);
+        console.log(`Input Parameters: { Base Rate: $${baseRate.toFixed(2)}, Toll Cost: $${tollCost.toFixed(2)}, Low Multiplier: ${lowMultiplier.toFixed(2)}x, High Multiplier: ${highMultiplier.toFixed(2)}x, Surge Floor: ${surgeFloor.toFixed(2)}x }`);
+        console.log(`Scenario Specifics: { Final Toll: $${toll.toFixed(2)}, Effective Multiplier: ${result.effectiveMultiplier.toFixed(2)}x }`);
+        console.log(`Total Fare (Pre-Promo): $${result.totalFare.toFixed(2)}`);
+        console.log(`Final Components: Base $${baseFare.toFixed(2)}, Toll $${toll.toFixed(2)}, Surge/Discount $${surge.toFixed(2)}`);
+        console.log(`Final Promo Fare (40% off): $${result.promoFare.toFixed(2)}`);
+        console.log("-----------------------------------------------------");
+
+        fareChart.data.datasets[0].data = [baseFare];
+        fareChart.data.datasets[1].data = [toll];
+        fareChart.data.datasets[2].data = [surge];
+        
+        // Dynamically change surge label/color if it's an implicit discount
+        fareChart.data.datasets[2].label = surge < 0 ? 'Implicit Discount' : 'Peak-Hour Surge';
+        fareChart.data.datasets[2].backgroundColor = surge < 0 ? '#22C55E' : '#F97316';
+        
+        fareChart.update();
+        
+        // 6. Update Button Styles
+        btnDirect.classList.toggle('btn-active', currentScenario === 'direct');
+        btnMidpoint.classList.toggle('btn-active', currentScenario === 'midpoint');
+    }
+
+    // --- Chart Initialization ---
+
+    function createChart() {
+        fareChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Fare Breakdown'],
+                datasets: [
+                    { label: 'Base Fare (Time + Distance)', data: [], backgroundColor: '#78716C', borderWidth: 1 },
+                    { label: 'Toll Fee', data: [], backgroundColor: '#EF4444', borderWidth: 1 },
+                    { label: 'Peak-Hour Surge', data: [], backgroundColor: '#F97316', borderWidth: 1 }
+                ]
+            },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    title: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                let label = context.dataset.label || '';
+                                if (context.parsed.x !== null) {
+                                    label += `: $${context.parsed.x.toFixed(2)}`;
+                                }
+                                return label;
+                            }
+                        }
+                    },
+                    legend: { position: 'bottom' }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        title: { display: true, text: 'Cost (Pre-Promotional)' },
+                        ticks: { callback: (value) => '$' + value }
+                    },
+                    y: { stacked: true }
+                }
+            }
+        });
+    }
+
+    // --- Event Listeners ---
+
+    // Scenario Buttons - Recalculate on click
+    btnDirect.addEventListener('click', () => { 
+        currentScenario = 'direct'; 
+        updateDisplay(); 
+    });
+    btnMidpoint.addEventListener('click', () => { 
+        currentScenario = 'midpoint'; 
+        updateDisplay(); 
+    });
+
+    // Mitigation Toggle - Recalculate on change (only for midpoint)
+    mitigationToggle.addEventListener('change', (e) => {
+        mitigationEnabled = e.target.checked;
+        if (currentScenario === 'midpoint') {
+             updateDisplay();
+        }
+    });
+
+    // Input Sliders (Listen to 'input' for real-time updates)
+    [inputBaseRate, inputTollCost, inputHighMultiplier, inputLowMultiplier, inputSurgeFloor].forEach(input => {
+        input.addEventListener('input', updateInputs);
+    });
+
+    // --- Initial Setup ---
+    window.onload = () => {
+        createChart();
+        updateInputs(); 
+    };
+</script>
+</body>
+</html>
